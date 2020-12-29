@@ -1,0 +1,282 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#define VMIN 5
+#define VMAX 30
+
+typedef struct T_Case
+{
+   int x;
+   int y;
+} T_Case;
+
+typedef T_Case* T_Tab_Case; //T_Case[] ne fonctionne pas
+
+int Contient(T_Tab_Case table, int taille, T_Case c)
+{
+   int i;
+   for (i = 0;i<taille;i++)
+      {
+      if (table[i].x == c.x && table[i].y == c.y)
+         return 1;
+      else 
+         return 0;
+      }
+}
+
+void Creation_plateau(T_Case pion, T_Tab_Case ban, int nban, int nlig, int ncol)
+{
+   printf("\n  ");
+   if (nlig >= 10)
+      printf(" ");
+   int i;
+   for (i = 1;i<=ncol;i++)
+   {
+      printf("%d", i);
+      if (i < 10)
+         printf(" ");
+   }
+   printf("\n");
+   int ligne, colonne;
+   for (ligne = 0;ligne<nlig;ligne++)
+   {
+      printf("%d", ligne+1);
+      if (nlig >= 10 && ligne < 9)
+         printf(" ");
+      printf("|");
+      for (colonne = 0;colonne<ncol;colonne++)
+      {
+         T_Case CaseActuelle;
+         CaseActuelle.x = colonne;
+         CaseActuelle.y = ligne;
+         if (pion.x == CaseActuelle.x && pion.y == CaseActuelle.y)
+            printf("O");
+         else if (Contient(ban, nban, CaseActuelle))
+            printf("X");
+         else
+            printf("-");
+         printf("|");
+      }
+      printf("\n");
+   }
+   printf("\n");
+}
+
+int Lire_Entier(int min, int max)
+{
+   int result;
+   do
+   {
+      scanf("%d", &result);
+      getchar();
+   } while (result < min || result > max);
+   return result;
+}
+
+int Hasard_Ban(T_Tab_Case ban, int nlig, int ncol)
+{
+   int nban = rand() % (ncol > nlig ? ncol : nlig), i;
+   for (i = 0;i<nban;i++)
+   {
+      int x;
+      int y;
+      T_Case CaseActuelle;
+      while (1)
+      {
+         x = rand() % ncol;
+         y = rand() % nlig;
+         CaseActuelle.x = x;
+         CaseActuelle.y = y;
+         //si la case se trouve dans un des deux coins autorises ou si la case se trouve dans la "partie centrale" du plateau alors
+         if (((x == 0 && y == nlig-1) || (x == nlig-1 && y == 0)) || ((x > 0 && x < ncol-1) && (y > 0 && y < nlig-1)))
+         {
+            //la case se trouve a  un emplacement de plateau autorisee, on verifie alors que la case ne soit pas deja  bannie
+            if (!Contient(ban, i, CaseActuelle))
+            {
+               T_Case CaseHautDroite, CaseBasGauche;
+               CaseHautDroite.x = x+1;
+               CaseHautDroite.y = y-1;
+               CaseBasGauche.x = x-1;
+               CaseBasGauche.y = y+1;
+               //s'il s'agit de la case en bas a  gauche et qu'elle n'a pas de case bannnies dans la diagonale
+               if (x == 0 && !Contient(ban, i, CaseHautDroite))
+                  break;
+               //s'il s'agit de la case en haut a  droite et qu'elle n'a pas de case bannnies dans la diagonale
+               else if (y == 0 && !Contient(ban, i, CaseBasGauche))
+                  break;
+               //sinon si aucune des cases dans sa diagonale (qui sont egalement les cases interdites) n'est occupee
+               else if (!Contient(ban, i, CaseBasGauche) && !Contient(ban, i, CaseHautDroite))
+                  break;
+            }
+         }
+      }
+      ban[i] = CaseActuelle;//on ajoute la case bannie
+   }
+
+   return nban;
+}
+
+void Parametres(int* nlig, int* ncol, int* niveau, int* next)
+{
+   printf("Nombre de colonnes de la grille (entre %d et %d) :", VMIN, VMAX);
+   *ncol = Lire_Entier(VMIN, VMAX); //Saisie d'un nombre de colonne entre VMIN=5 et VMAX=30
+   printf("Nombre de lignes de la grille (entre %d et %d) :", VMIN, VMAX);
+   *nlig = Lire_Entier(VMIN, VMAX); //Saisie d'un nombre de ligne entre VMIN et VMAX
+   printf("Difficulte (entre 1 et 4) :");
+   *niveau = Lire_Entier(1, 4);
+   printf("1 si l'ordi commence, sinon 2 :");
+   *next = Lire_Entier(1, 2); //Si next=2 alors c'est le joueur qui commence
+}
+
+void Calcul_Nimbers(int nim[][VMAX], int nlig, int ncol)
+{
+   int x, y;
+   int nimber = 0;
+   for (x = ncol - 1 ; x >= 0 ; x--)
+   {
+      int baseNimber = nimber;
+      for (y = nlig - 1 ; y >= 0 ; y--)
+      {
+         nim[x][y] = nimber > 0 ? 1:0;
+         nimber = (nimber+1)%3;
+      }
+      nimber = (baseNimber+1)%3;
+   }
+}
+
+int Voisines(T_Tab_Case voi, T_Case pion, T_Tab_Case ban, int nban, int nlig, int ncol) //voi correspond a voisine
+{
+   int nvoi = 0;
+   {
+      T_Case droite;
+      droite.x = pion.x+1;
+      droite.y = pion.y;
+      if (droite.x < ncol && !Contient(ban, nban, droite))
+      {
+         voi[nvoi++] = droite;
+         droite.x++;
+         if (droite.x < ncol && !Contient(ban, nban, droite))
+            voi[nvoi++] = droite;
+      }
+   }
+   {
+      T_Case bas;
+      bas.x = pion.x;
+      bas.y = pion.y+1;
+      if (bas.y < nlig && !Contient(ban, nban, bas))
+      {
+         voi[nvoi++] = bas;
+         bas.y++;
+         if (bas.y < nlig && !Contient(ban, nban, bas))
+            voi[nvoi++] = bas;
+      }
+   }
+   return nvoi;
+}
+void Coup_joueur(T_Case* pion, T_Tab_Case ban, int nban, int nlig, int ncol)
+{
+   printf("A toi de jouer !\n");
+   T_Case voi[4];
+   int nvoi = Voisines(voi, *pion, ban, nban, nlig, ncol);
+   int selection;
+   if (nvoi == 1)
+   {
+      printf("Seule possibilite : (%d,%d)\nvalider --->\n", voi[0].y+1, voi[0].x+1);
+      getchar();
+      selection = 0;
+   }
+   else
+   {
+      printf("Choisir la destination");
+      int i;
+      for (i = 0;i<nvoi;i++)
+         printf(" %d:(%d,%d)", i+1, voi[i].y+1, voi[i].x+1);
+      printf("\n---> ");
+      selection = Lire_Entier(1, nvoi+1)-1;
+   }
+   *pion = voi[selection];
+}
+
+void Coup_Ordi_Hasard(T_Case* pion, T_Tab_Case ban, int nban, int nlig, int ncol)
+{
+   T_Case voi[4];
+   int nvoi = Voisines(voi, *pion, ban, nban, nlig, ncol);
+   int selection = rand()%nvoi;
+   *pion = voi[selection];
+   printf("L'ordinateur deplace le pion en (%d,%d)\n", pion->y+1, pion->x+1);
+}
+
+void Coup_Ordi_Gagnant(T_Case* pion, T_Tab_Case ban, int nim[][VMAX], int nban, int nlig, int ncol)
+{
+   T_Case voi[4];
+   int nvoi = Voisines(voi, *pion, ban, nban, nlig, ncol);
+   int i;
+   for (i = 0;i<nvoi;i++)
+   {
+      T_Case caseActuelle = voi[i];
+      if (nim[caseActuelle.x][caseActuelle.y] == 0)
+      {
+         *pion = voi[i];
+         printf("L'ordinateur deplace le pion en (%d,%d)\n", pion->y+1, pion->x+1);
+         return;
+      }
+   }
+   Coup_Ordi_Hasard(pion, ban, nban, nlig, ncol);
+}
+
+int main()
+{
+   srand(time(NULL));
+   T_Case pion;
+   pion.x = 0;
+   pion.y = 0;
+   T_Case ban[VMAX];
+   int nim[VMAX][VMAX];
+   int nlig, ncol, niveau, next;
+   Parametres(&nlig, &ncol, &niveau, &next);
+   int nban = Hasard_Ban(ban, nlig, ncol);
+   Calcul_Nimbers(nim, nlig, ncol);
+   printf("\nC'est parti !\n");
+
+   while (pion.x < ncol-1 || pion.y < nlig-1)
+   {
+      Creation_plateau(pion, ban, nban, nlig, ncol);
+      if (next == 1)
+      {
+         switch(niveau)
+         {
+            case 1:
+               Coup_Ordi_Hasard(&pion, ban, nban, nlig, ncol);
+               break;
+            case 2:
+               if (rand()%3 == 0)
+                  Coup_Ordi_Gagnant(&pion, ban, nim, nban, nlig, ncol);
+               else
+                  Coup_Ordi_Hasard(&pion, ban, nban, nlig, ncol);
+               break;
+            case 3:
+               if (rand()%3 == 0)
+                  Coup_Ordi_Hasard(&pion, ban, nban, nlig, ncol);
+               else
+                  Coup_Ordi_Gagnant(&pion, ban, nim, nban, nlig, ncol);
+               break;
+            case 4:
+               Coup_Ordi_Gagnant(&pion, ban, nim, nban, nlig, ncol);
+               break;
+         }
+         next = 2;
+      }
+      else
+      {
+         Coup_joueur(&pion, ban, nban, nlig, ncol);
+         next = 1;
+      }
+      printf("%d   %d\n", pion.x, pion.y);
+   }
+   Creation_plateau(pion, ban, nban, nlig, ncol);
+   if (next == 1)
+      printf("C'est termine. BRAVO TU AS GAGNE ! :)\n");
+   else
+      printf("C'est termine. L'ordinateur a gagne :( !\n");
+   return 0;
+}
